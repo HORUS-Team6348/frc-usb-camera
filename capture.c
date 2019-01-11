@@ -1,12 +1,12 @@
 #include <libuvc/libuvc.h>
 #include <sys/timeb.h>
 #include <inttypes.h>
-#include <stdio.h>
+#include <unistd.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <time.h>
 
-uint64_t start_time;
+uint64_t start_time, frame_counter, prev_frame_time;
 
 uint64_t time_ns(){
     struct timespec start;
@@ -15,7 +15,12 @@ uint64_t time_ns(){
 }
 
 void callback(uvc_frame_t *frame, void *ptr){
+    uint64_t start  = time_ns();
 
+    printf("\033[2Areceived frame %d (%" PRIu64 ") (%zu bytes) after %" PRIu64 " ns (%.2f est fps)\n",
+    frame->sequence, frame_counter+1, frame->data_bytes, start-prev_frame_time, (1.0e9/(start-prev_frame_time)));
+
+    prev_frame_time = start;
 }
 
 
@@ -55,8 +60,23 @@ int main(int argc, char **argv) {
             debug("UVC device opened");
             
             res = uvc_get_stream_ctrl_format_size(devh, &ctrl, UVC_FRAME_FORMAT_MJPEG, 1280, 720, 30);
-            uvc_print_stream_ctrl(&ctrl, stderr);
             
+            if (res < 0) {
+                uvc_perror(res, "uvc_get_stream_ctrl_format_size"); /* device doesn't provide a matching stream */
+            } else {
+                res = uvc_start_streaming(devh, &ctrl, callback, 0, 0);
+                
+                if (res < 0) {
+                    uvc_perror(res, "uvc_start_streaming"); /* unable to start stream */
+                } else {
+                    debug("Stream started");
+                    uvc_set_ae_mode(devh, 1);
+                    sleep(10);
+                    uvc_stop_streaming(devh);
+                    debug("Done streaming.");
+                }
+            }
+
             uvc_close(devh);
             debug("UVC device closed");
         }
