@@ -53,7 +53,10 @@ int main(int argc, char **argv) {
             uvc_perror(res, "uvc_open");
         } else {
             debug("UVC device opened");
-            uvc_print_diag(devh, stderr);
+            
+            res = uvc_get_stream_ctrl_format_size(devh, &ctrl, UVC_FRAME_FORMAT_MJPEG, 1280, 720, 30);
+            uvc_print_stream_ctrl(&ctrl, stderr);
+            
             uvc_close(devh);
             debug("UVC device closed");
         }
