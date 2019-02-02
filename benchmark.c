@@ -44,7 +44,7 @@ int main(int argc, char **argv) {
 
     uint8_t *buffer = calloc(10000000, 1);
 
-    if(buffer == NULL || yuv_buffer == NULL){
+    if(buffer == NULL || yuv_buffer == NULL)  {
         fprintf(stderr, "error: could not allocate array\n");
         exit(-1);
     }
