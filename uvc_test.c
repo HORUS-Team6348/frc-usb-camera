@@ -48,9 +48,12 @@ tjhandle tj_decompressor;
 
 uvc_context_t *ctx;
 uvc_error_t res;
-uvc_device_t *dev;
-uvc_device_handle_t *devh;
-uvc_stream_ctrl_t ctrl;
+uvc_device_t *dev_a;
+uvc_device_t *dev_b;
+uvc_device_handle_t *devh_a;
+uvc_device_handle_t *devh_b;
+uvc_stream_ctrl_t ctrl_a;
+uvc_stream_ctrl_t ctrl_b;
 
 AVCodec *codec;
 AVFrame *avframe;
@@ -215,7 +218,7 @@ void ffmpeg_encode_frame(uint64_t pts, bool flush){
   }
 }
 
-void cb(uvc_frame_t *frame, void *ptr){
+void cba(uvc_frame_t *frame, void *ptr){
   uint64_t start, end, elapsed;
   uint32_t ret, pkt_counter;
 
@@ -248,6 +251,10 @@ void cb(uvc_frame_t *frame, void *ptr){
   frame_processing_times += elapsed;
   double pct = (elapsed * fps / 1e7);
   printf("\033[2Kframe processed in %" PRIu64 " ns (%f%% of available time) (encoded with crf: %i)\n", elapsed, pct, (int) crf);
+}
+
+void cbb(uvc_frame_t *frame, void *ptr){
+
 }
 
 int ffmpeg_encoder_start(int width, int height, int fps){
@@ -333,16 +340,18 @@ uvc_error_t uvc_setup_dev(){
 
   printf("libuvc initialized correctly\n");
 
-  res = uvc_find_device(ctx, &dev, 0, 0, NULL);
+  res = uvc_find_device(ctx, &dev_a, 0x045e, 0x0779, NULL); //Microsoft Corp. LifeCam HD-3000
+  res = uvc_find_device(ctx, &dev_b, 0x046d, 0x0826, NULL); //Logitech, Inc. HD Webcam C525
 
   if (res < 0) {
     uvc_perror(res, "uvc_find_device");
     return res;
   }
 
-  printf("found a device\n");
+  printf("found devices\n");
 
-  res = uvc_open(dev, &devh);
+  res = uvc_open(dev_a, &devh_a);
+  res = uvc_open(dev_b, &devh_b);
 
   if (res < 0) {
     uvc_perror(res, "uvc_open");
@@ -353,7 +362,8 @@ uvc_error_t uvc_setup_dev(){
 }
 
 uvc_error_t uvc_setup_stream(int width, int height, int fps){
-  res = uvc_get_stream_ctrl_format_size(devh, &ctrl, UVC_FRAME_FORMAT_MJPEG, width, height, fps);
+  res = uvc_get_stream_ctrl_format_size(devh_a, &ctrl_a, UVC_FRAME_FORMAT_MJPEG, width, height, fps);
+  res = uvc_get_stream_ctrl_format_size(devh_b, &ctrl_b, UVC_FRAME_FORMAT_MJPEG, width, height, fps);
 
   if (res < 0) {
     uvc_perror(res, "uvc_get_stream_ctrl_format_size");
@@ -362,7 +372,8 @@ uvc_error_t uvc_setup_stream(int width, int height, int fps){
 }
 
 uvc_error_t start_stream(){
-  res = uvc_start_streaming(devh, &ctrl, cb, 0, 0);
+  res = uvc_start_streaming(devh, &ctrl_a, cba, 0, 0);
+  res = uvc_start_streaming(devh, &ctrl_b, cbb, 0, 0);
 
   prev_frame_time = get_ns();
 
@@ -373,12 +384,14 @@ uvc_error_t start_stream(){
 
   printf("streaming...\n\n\n\n");
 
-  res = uvc_set_ae_priority(devh, 1);
+  res = uvc_set_ae_priority(devh_a, 1);
+  res = uvc_set_ae_priority(devh_b, 1);
 
 }
 
 void stop_stream(){
-    uvc_stop_streaming(devh);
+    uvc_stop_streaming(devh_a);
+    uvc_stop_streaming(devh_b);
     ffmpeg_encode_frame(frame_counter+1, true);
     printf("\n");
 }
@@ -406,8 +419,10 @@ void app_print_stats(){
 }
 
 void app_cleanup(){
-  uvc_close(devh);
-  uvc_unref_device(dev);
+  uvc_close(devh_a);
+  uvc_close(devh_b);
+  uvc_unref_device(dev_a);
+  uvc_unref_device(dev_b);
   uvc_exit(ctx);
   avcodec_free_context(&avctx);
 }
@@ -534,8 +549,6 @@ int main(int argc, char **argv){
 
   setup_network();
   wait_for_negotiation(&width, &height, &fps);
-
-  f = fopen ("sout.264", "wb");
 
   err = ffmpeg_encoder_start(width, height, fps);
   err = turbojpeg_decoder_start();
