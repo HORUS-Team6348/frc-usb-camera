@@ -372,8 +372,8 @@ uvc_error_t uvc_setup_stream(int width, int height, int fps){
 }
 
 uvc_error_t start_stream(){
-  res = uvc_start_streaming(devh, &ctrl_a, cba, 0, 0);
-  res = uvc_start_streaming(devh, &ctrl_b, cbb, 0, 0);
+  res = uvc_start_streaming(devh_a, &ctrl_a, cba, 0, 0);
+  res = uvc_start_streaming(devh_b, &ctrl_b, cbb, 0, 0);
 
   prev_frame_time = get_ns();
 

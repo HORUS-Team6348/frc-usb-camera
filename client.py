@@ -1,7 +1,10 @@
 from twisted.internet.protocol import DatagramProtocol
 from twisted.internet import reactor
 from packet import Packet, State, NegotiatePacket, PacketType, AckPacket, FinishPacket
-import time, sys
+import time
+import sdl2.ext
+import numpy as np
+import av
 
 frames = {}
 
@@ -15,7 +18,7 @@ class VideoClient(DatagramProtocol):
         self.previous_packet_time = 0
 
     def startProtocol(self):
-        packet = NegotiatePacket(1920, 1080, 30)
+        packet = NegotiatePacket(1280, 720, 30)
         self.sendPacket(packet)
 
     def finishConnection(self):
@@ -23,11 +26,11 @@ class VideoClient(DatagramProtocol):
         self.sendPacket(packet)
 
     def sendPacket(self, packet):
-        self.transport.write(packet.encode(), ("127.0.0.1", 9999))
+        self.transport.write(packet.encode(), ("192.168.43.165", 1188))
 
     def datagramReceived(self, data, addr):
         packet = Packet.decode(data)
-        print(packet)
+        #print(packet)
         if packet.type == PacketType.FRAME:
             if packet.frame_idx not in frames:
                 frames[packet.frame_idx] = {}
@@ -41,8 +44,15 @@ class VideoClient(DatagramProtocol):
                 whole_frame = b""
                 for i in range(packet.sequence_total):
                     whole_frame += frames[packet.frame_idx][i]
-                print(f"received frame {packet.frame_idx}", file=sys.stderr)
-                sys.stdout.buffer.write(whole_frame)
+                print(f"received frame {packet.frame_idx}")
+                pkt = av.packet.Packet(whole_frame)
+                raw_frame = h264_decoder.decode(pkt)[0].reformat(format="bgra").to_ndarray()
+                raw_frame = np.rot90(raw_frame)
+                raw_frame = np.flipud(raw_frame)
+                raw_frame.shape = (1280, 720, 4)
+                np.copyto(window_array, raw_frame)
+                window.refresh()
+                sdl2.SDL_PumpEvents()
                 frames.pop(packet.frame_idx)
                 res = AckPacket(packet.frame_idx, interarrival_time)
                 self.sendPacket(res)
@@ -55,6 +65,13 @@ class VideoClient(DatagramProtocol):
 
 
 f = open("out.264", "wb")
+h264 = av.Codec("h264")
+h264_decoder = av.CodecContext.create(h264)
+sdl2.ext.init()
+window = sdl2.ext.Window("frc-usb-camera", size=(1280, 720))
+window.show()
+window_surface = sdl2.SDL_GetWindowSurface(window.window)
+window_array = sdl2.ext.pixels3d(window_surface.contents)
 vc = VideoClient()
 reactor.listenUDP(2601, vc)
 reactor.addSystemEventTrigger('before', 'shutdown', vc.finishConnection)
