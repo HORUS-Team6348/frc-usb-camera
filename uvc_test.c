@@ -100,7 +100,7 @@ void die(char *s){
 
 void jpeg_to_yuv422(void *src, size_t bytes){
   unsigned char *data_arrs[] = {avframe->data[0], avframe->data[1], avframe->data[2]};
-  tjDecompressToYUVPlanes(tj_decompressor, src, bytes, data_arrs, width, NULL, height, 0);
+  tjDecompressToYUVPlanes(tj_decompressor, src, bytes, data_arrs, width, NULL, height, TJFLAG_FASTDCT);
 }
 
 void network_send_frame(uint32_t frame_idx, uint8_t *data, int len){
@@ -162,8 +162,8 @@ void network_send_frame(uint32_t frame_idx, uint8_t *data, int len){
 
 void set_crf(){
   char crfs[10];
-  if(crf > 50){
-    crf = 50;
+  if(crf > 32){
+    crf = 32;
   } else if(crf < 0){
     crf = 0;
   }
@@ -174,7 +174,10 @@ void set_crf(){
 void ffmpeg_encode_frame(uint64_t pts, bool flush){
   uint32_t ret;
   avframe->pts = pts;
-  //avframe->pict_type = AV_PICTURE_TYPE_I;
+  
+  if(pts % 100 == 0){
+    avframe->pict_type = AV_PICTURE_TYPE_I;
+  }
 
   if(flush){
     avframe = NULL;
@@ -202,9 +205,9 @@ void ffmpeg_encode_frame(uint64_t pts, bool flush){
       network_send_frame(pts, pkt->data, pkt->size);
       fwrite(pkt->data, pkt->size, 1, f);
       if(allowed_to_send > pkt->size){
-        crf -= 0.05;
+        crf -= 0.04;
       } else {
-        crf += 0.05;
+        crf += 0.04;
       }
       set_crf();
     }
@@ -273,7 +276,7 @@ int ffmpeg_encoder_start(int width, int height, int fps){
   //avctx->rc_buffer_size = 1e6;
   //avctx->rc_max_rate = 10e6;
 
-  av_opt_set(avctx->priv_data, "preset", "veryfast", 0);
+  av_opt_set(avctx->priv_data, "preset", "ultrafast", 0);
   av_opt_set(avctx->priv_data, "tune", "zerolatency", 0);
   av_opt_set(avctx->priv_data, "crf", "23", 0);
 
@@ -349,8 +352,8 @@ uvc_error_t uvc_setup_dev(){
   printf("device opened correctly\n");
 }
 
-uvc_error_t uvc_setup_stream(){
-  res = uvc_get_stream_ctrl_format_size(devh, &ctrl, UVC_FRAME_FORMAT_MJPEG, 1920, 1080, 30);
+uvc_error_t uvc_setup_stream(int width, int height, int fps){
+  res = uvc_get_stream_ctrl_format_size(devh, &ctrl, UVC_FRAME_FORMAT_MJPEG, width, height, fps);
 
   if (res < 0) {
     uvc_perror(res, "uvc_get_stream_ctrl_format_size");
@@ -370,7 +373,7 @@ uvc_error_t start_stream(){
 
   printf("streaming...\n\n\n\n");
 
-  res = uvc_set_ae_priority(devh, 0);
+  res = uvc_set_ae_priority(devh, 1);
 
 }
 
