@@ -14,7 +14,7 @@
 
 int width, height, fps;
 
-#define PORT 9999
+#define PORT 1188
 #define BUFSIZE 512
 #define MTU 491
 
