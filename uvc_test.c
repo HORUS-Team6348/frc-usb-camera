@@ -236,8 +236,8 @@ void cb(uvc_frame_t *frame, void *ptr){
   start  = get_ns();
   //start frame processing
 
-  printf("\033[2Areceived frame %d (%" PRIu64 ") (%zu bytes) after %" PRIu64 " ns (%.2f est fps)\n",
-    frame->sequence, frame_counter+1, frame->data_bytes, start-prev_frame_time, (1.0e9/(start-prev_frame_time)));
+  printf("\033[2Areceived frame %d (%" PRIu64 ") from camera %i (%zu bytes) after %" PRIu64 " ns (%.2f est fps)\n",
+    frame->sequence, frame_counter+1, camera_id, frame->data_bytes, start-prev_frame_time, (1.0e9/(start-prev_frame_time)));
 
   frame_times += start-prev_frame_time;
   data_bytes += frame->data_bytes;
@@ -381,6 +381,8 @@ uvc_error_t uvc_setup_dev(){
   res = uvc_open(udl[0], &devh_a);
   res = uvc_open(udl[1], &devh_b);
   res = uvc_open(udl[2], &devh_c);
+
+  res = uvc_free_device_list(udl, )
 
   if (res < 0) {
     uvc_perror(res, "uvc_open");
