@@ -236,6 +236,13 @@ void cb(uvc_frame_t *frame, void *ptr){
   start  = get_ns();
   //start frame processing
 
+  uint64_t current_frames_if = frame_counter - last_acked_frame;
+
+  if(current_frames_if > 300){
+    printf("Haven't been acked frames in a while (300 frames). Exiting.");
+    exit(1);
+  }
+
   printf("\033[2Areceived frame %d (%" PRIu64 ") from camera %i (%zu bytes) after %" PRIu64 " ns (%.2f est fps)\n",
     frame->sequence, frame_counter+1, camera_id, frame->data_bytes, start-prev_frame_time, (1.0e9/(start-prev_frame_time)));
 

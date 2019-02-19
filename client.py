@@ -1,5 +1,6 @@
 from twisted.internet.protocol import DatagramProtocol
 from twisted.internet import reactor
+from datetime import datetime
 from packet import Packet, State, NegotiatePacket, PacketType, AckPacket, FinishPacket, ChangePacket
 import time
 import sdl2.ext
@@ -52,6 +53,7 @@ class VideoClient(DatagramProtocol):
                 raw_frame.shape = (1280, 720, 4)
                 np.copyto(window_array, raw_frame)
                 window.refresh()
+                f.write(whole_frame)
                 for event in sdl2.ext.get_events():
                     if event.type == sdl2.SDL_KEYDOWN:
                         if sdl2.SDL_GetKeyName(event.key.keysym.sym).lower() == b'a':
@@ -72,8 +74,8 @@ class VideoClient(DatagramProtocol):
         elif packet.type == PacketType.FINISH:
             reactor.stop()
 
-
-f = open("out.264", "wb")
+fn = datetime.now().isoformat().replace(":", "-")
+f = open(f"videos/{fn}.264", "wb")
 h264 = av.Codec("h264")
 h264_decoder = av.CodecContext.create(h264)
 sdl2.ext.init()
