@@ -53,10 +53,13 @@ uvc_context_t *ctx;
 uvc_error_t res;
 uvc_device_t *dev_a;
 uvc_device_t *dev_b;
+uvc_device_t *dev_c;
 uvc_device_handle_t *devh_a;
 uvc_device_handle_t *devh_b;
+uvc_device_handle_t *devh_c;
 uvc_stream_ctrl_t ctrl_a;
 uvc_stream_ctrl_t ctrl_b;
+uvc_stream_ctrl_t ctrl_c;
 
 AVCodec *codec;
 AVFrame *avframe;
@@ -260,83 +263,30 @@ void cb(uvc_frame_t *frame, void *ptr){
   printf("\033[2Kframe processed in %" PRIu64 " ns (%f%% of available time) (encoded with crf: %i)\n", elapsed, pct, (int) crf);
 }
 
-void cbb(uvc_frame_t *frame, void *ptr){
-  if(camera_id == 1 && lock != 1){
-    lock = 1;
-    uint64_t start, end, elapsed;
-    uint32_t ret, pkt_counter;
-
-    start  = get_ns();
-    //start frame processing
-
-    printf("\033[2Areceived frame %d (%" PRIu64 ") from camera 1 (%zu bytes) after %" PRIu64 " ns (%.2f est fps)\n",
-      frame->sequence, frame_counter+1, frame->data_bytes, start-prev_frame_time, (1.0e9/(start-prev_frame_time)));
-
-    frame_times += start-prev_frame_time;
-    data_bytes += frame->data_bytes;
-    prev_frame_time = start;
-    frame_counter++;
-    dropped_counter = frame->sequence - frame_counter;
-    sequence_counter = frame->sequence;
-
-
-    jpeg_to_yuv422(frame->data, frame->data_bytes);
-    jpeg_time += get_ns() - start;
-    ffmpeg_encode_frame(frame_counter, false);
-    h264_time += get_ns() - start;
-
-
-    //end frame processing
-    end = get_ns();
-    elapsed = end - start;
-    if(elapsed > (1e9 / fps)) {
-      overrun_counter += 1;
-    }
-    frame_processing_times += elapsed;
-    double pct = (elapsed * fps / 1e7);
-    printf("\033[2Kframe processed in %" PRIu64 " ns (%f%% of available time) (encoded with crf: %i)\n", elapsed, pct, (int) crf);
-    lock = 0;
-  }
-}
-
 void cba(uvc_frame_t *frame, void *ptr){
   if(camera_id == 0 && lock != 1){
     lock = 1;
-    uint64_t start, end, elapsed;
-    uint32_t ret, pkt_counter;
-
-    start  = get_ns();
-    //start frame processing
-
-    printf("\033[2Areceived frame %d (%" PRIu64 ") from camera 0 (%zu bytes) after %" PRIu64 " ns (%.2f est fps)\n",
-      frame->sequence, frame_counter+1, frame->data_bytes, start-prev_frame_time, (1.0e9/(start-prev_frame_time)));
-
-    frame_times += start-prev_frame_time;
-    data_bytes += frame->data_bytes;
-    prev_frame_time = start;
-    frame_counter++;
-    dropped_counter = frame->sequence - frame_counter;
-    sequence_counter = frame->sequence;
-
-
-    jpeg_to_yuv422(frame->data, frame->data_bytes);
-    jpeg_time += get_ns() - start;
-    ffmpeg_encode_frame(frame_counter, false);
-    h264_time += get_ns() - start;
-
-
-    //end frame processing
-    end = get_ns();
-    elapsed = end - start;
-    if(elapsed > (1e9 / fps)) {
-      overrun_counter += 1;
-    }
-    frame_processing_times += elapsed;
-    double pct = (elapsed * fps / 1e7);
-    printf("\033[2Kframe processed in %" PRIu64 " ns (%f%% of available time) (encoded with crf: %i)\n", elapsed, pct, (int) crf);
+    cb(frame, ptr);
     lock = 0;
   }
 }
+
+void cbb(uvc_frame_t *frame, void *ptr){
+  if(camera_id == 1 && lock != 1){
+    lock = 1;
+    cb(frame, ptr);
+    lock = 0;
+  }
+}
+
+void cbc(uvc_frame_t *frame, void *ptr){
+  if(camera_id == 2 && lock != 1){
+    lock = 1;
+    cb(frame, ptr);
+    lock = 0;
+  }
+}
+
 
 int ffmpeg_encoder_start(int width, int height, int fps){
   int ret;
@@ -422,7 +372,8 @@ uvc_error_t uvc_setup_dev(){
   printf("libuvc initialized correctly\n");
 
   res = uvc_find_device(ctx, &dev_a, 0x045e, 0x0779, NULL); //Microsoft Corp. LifeCam HD-3000
-  res = uvc_find_device(ctx, &dev_b, 0x046d, 0x0826, NULL); //Logitech, Inc. HD Webcam C525
+  res = uvc_find_device(ctx, &dev_b, 0x046d, 0x0826, "EA8C4F90"); //Logitech, Inc. HD Webcam C525
+  res = uvc_find_device(ctx, &dev_c, 0x046d, 0x0826, "8ABCAA10"); //Logitech, Inc. HD Webcam C525
 
   if (res < 0) {
     uvc_perror(res, "uvc_find_device");
@@ -433,6 +384,7 @@ uvc_error_t uvc_setup_dev(){
 
   res = uvc_open(dev_a, &devh_a);
   res = uvc_open(dev_b, &devh_b);
+  res = uvc_open(dev_c, &devh_c);
 
   if (res < 0) {
     uvc_perror(res, "uvc_open");
@@ -444,8 +396,8 @@ uvc_error_t uvc_setup_dev(){
 
 uvc_error_t uvc_setup_stream(int width, int height, int fps){
   res = uvc_get_stream_ctrl_format_size(devh_a, &ctrl_a, UVC_FRAME_FORMAT_MJPEG, width, height, fps);
-  
   res = uvc_get_stream_ctrl_format_size(devh_b, &ctrl_b, UVC_FRAME_FORMAT_MJPEG, width, height, fps);
+  res = uvc_get_stream_ctrl_format_size(devh_c, &ctrl_c, UVC_FRAME_FORMAT_MJPEG, width, height, fps);
 
   if (res < 0) {
     uvc_perror(res, "uvc_get_stream_ctrl_format_size");
@@ -456,6 +408,7 @@ uvc_error_t uvc_setup_stream(int width, int height, int fps){
 uvc_error_t start_stream(){
   res = uvc_start_streaming(devh_a, &ctrl_a, cba, 0, 0);
   res = uvc_start_streaming(devh_b, &ctrl_b, cbb, 0, 0);
+  res = uvc_start_streaming(devh_c, &ctrl_c, cbc, 0, 0);
 
   prev_frame_time = get_ns();
 
@@ -468,6 +421,7 @@ uvc_error_t start_stream(){
 
   res = uvc_set_ae_priority(devh_a, 1);
   res = uvc_set_ae_priority(devh_b, 1);
+  res = uvc_set_ae_priority(devh_c, 1);
 
 }
 
