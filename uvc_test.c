@@ -23,6 +23,7 @@ int width, height, fps;
 #define FRAME       3
 #define ACK         4
 #define FINISH      5
+#define CHANGE      6
 
 uint64_t frame_counter = 0;
 uint64_t sequence_counter = 0;
@@ -40,6 +41,7 @@ int64_t avg_interarrival_time = 0;
 int64_t allowed_to_send = INT_MAX;
 uint64_t last_acked_frame = 0;
 uint8_t consecutive_skips = 0;
+uint8_t camera_id = 0;
 
 float crf = 23;
 int overrun_counter = 0;
@@ -60,7 +62,6 @@ AVFrame *avframe;
 AVPacket *pkt;
 AVCodecContext *avctx = NULL;
 
-FILE *f;
 
 struct sockaddr_in serveraddr, clientaddr;
 int sockfd;
@@ -80,6 +81,11 @@ typedef struct ack_packet {
   uint32_t frame_idx;
   int32_t interarrival_time;
 } ack_packet;
+
+typedef struct change_packet {
+  uint8_t type;
+  uint8_t camera_id;
+} change_packet;
 
 typedef struct response_packet {
   uint8_t type;
@@ -218,7 +224,8 @@ void ffmpeg_encode_frame(uint64_t pts, bool flush){
   }
 }
 
-void cba(uvc_frame_t *frame, void *ptr){
+void cb(uvc_frame_t *frame, void *ptr){
+
   uint64_t start, end, elapsed;
   uint32_t ret, pkt_counter;
 
@@ -254,7 +261,15 @@ void cba(uvc_frame_t *frame, void *ptr){
 }
 
 void cbb(uvc_frame_t *frame, void *ptr){
+  if(camera_id == 1){
+    cb(frame, ptr);
+  }
+}
 
+void cba(uvc_frame_t *frame, void *ptr){
+  if(camera_id == 0){
+    cb(frame, ptr);
+  }
 }
 
 int ffmpeg_encoder_start(int width, int height, int fps){
@@ -363,6 +378,7 @@ uvc_error_t uvc_setup_dev(){
 
 uvc_error_t uvc_setup_stream(int width, int height, int fps){
   res = uvc_get_stream_ctrl_format_size(devh_a, &ctrl_a, UVC_FRAME_FORMAT_MJPEG, width, height, fps);
+  
   res = uvc_get_stream_ctrl_format_size(devh_b, &ctrl_b, UVC_FRAME_FORMAT_MJPEG, width, height, fps);
 
   if (res < 0) {
@@ -473,6 +489,11 @@ void decode_ack_packet(unsigned char *buf, ack_packet *packet){
   packet->interarrival_time = (buf[5] << 24) | (buf[6] << 16) | (buf[7] << 8) | buf[8];
 }
 
+void decode_change_packet(unsigned char *buf, change_packet *packet){
+  packet->type = buf[0];
+  packet->camera_id = buf[1];
+}
+
 void wait_for_negotiation(int *width, int *height, int* fps){
   printf("waiting for client request...\n");
   while(1){
@@ -513,7 +534,7 @@ void finish_connection(){
 }
 
 void control_loop(){
-  while(frame_counter != 2000){
+  while(true){
     res = recvfrom(sockfd, netbuf, BUFSIZE, 0, (struct sockaddr *) &clientaddr, &clientlen);
 
     if(res == -1){
@@ -532,7 +553,11 @@ void control_loop(){
       uint64_t current_frames_if = frame_counter - last_acked_frame;
       uint64_t aprox_bytes_if = current_frames_if * (h264_bytes/frame_counter);
       allowed_to_send = ((MTU+17)*packets_in_flight_limit) - aprox_bytes_if;
-    } else if(type == FINISH){
+    } else if (type == CHANGE) {
+      change_packet cpacket;
+      decode_change_packet(nbuf, &cpacket);
+      camera_id = cpacket.camera_id;
+    } else if(type == FINISH) {
       stop_stream();
       finish_connection();
       app_print_stats();
