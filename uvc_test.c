@@ -261,13 +261,75 @@ void cb(uvc_frame_t *frame, void *ptr){
 
 void cbb(uvc_frame_t *frame, void *ptr){
   if(camera_id == 1){
-    cb(frame, ptr);
+    uint64_t start, end, elapsed;
+    uint32_t ret, pkt_counter;
+
+    start  = get_ns();
+    //start frame processing
+
+    printf("\033[2Areceived frame %d (%" PRIu64 ") from camera 1 (%zu bytes) after %" PRIu64 " ns (%.2f est fps)\n",
+      frame->sequence, frame_counter+1, frame->data_bytes, start-prev_frame_time, (1.0e9/(start-prev_frame_time)));
+
+    frame_times += start-prev_frame_time;
+    data_bytes += frame->data_bytes;
+    prev_frame_time = start;
+    frame_counter++;
+    dropped_counter = frame->sequence - frame_counter;
+    sequence_counter = frame->sequence;
+
+
+    jpeg_to_yuv422(frame->data, frame->data_bytes);
+    jpeg_time += get_ns() - start;
+    ffmpeg_encode_frame(frame_counter, false);
+    h264_time += get_ns() - start;
+
+
+    //end frame processing
+    end = get_ns();
+    elapsed = end - start;
+    if(elapsed > (1e9 / fps)) {
+      overrun_counter += 1;
+    }
+    frame_processing_times += elapsed;
+    double pct = (elapsed * fps / 1e7);
+    printf("\033[2Kframe processed in %" PRIu64 " ns (%f%% of available time) (encoded with crf: %i)\n", elapsed, pct, (int) crf);
   }
 }
 
 void cba(uvc_frame_t *frame, void *ptr){
   if(camera_id == 0){
-    cb(frame, ptr);
+    uint64_t start, end, elapsed;
+    uint32_t ret, pkt_counter;
+
+    start  = get_ns();
+    //start frame processing
+
+    printf("\033[2Areceived frame %d (%" PRIu64 ") from camera 0 (%zu bytes) after %" PRIu64 " ns (%.2f est fps)\n",
+      frame->sequence, frame_counter+1, frame->data_bytes, start-prev_frame_time, (1.0e9/(start-prev_frame_time)));
+
+    frame_times += start-prev_frame_time;
+    data_bytes += frame->data_bytes;
+    prev_frame_time = start;
+    frame_counter++;
+    dropped_counter = frame->sequence - frame_counter;
+    sequence_counter = frame->sequence;
+
+
+    jpeg_to_yuv422(frame->data, frame->data_bytes);
+    jpeg_time += get_ns() - start;
+    ffmpeg_encode_frame(frame_counter, false);
+    h264_time += get_ns() - start;
+
+
+    //end frame processing
+    end = get_ns();
+    elapsed = end - start;
+    if(elapsed > (1e9 / fps)) {
+      overrun_counter += 1;
+    }
+    frame_processing_times += elapsed;
+    double pct = (elapsed * fps / 1e7);
+    printf("\033[2Kframe processed in %" PRIu64 " ns (%f%% of available time) (encoded with crf: %i)\n", elapsed, pct, (int) crf);
   }
 }
 
