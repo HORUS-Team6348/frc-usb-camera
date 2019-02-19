@@ -206,7 +206,7 @@ void ffmpeg_encode_frame(uint64_t pts, bool flush){
         network_send_frame(pts, pkt->data, pkt->size); //redundancy, it's the first frame and it contains important headers
       }
       network_send_frame(pts, pkt->data, pkt->size);
-      fwrite(pkt->data, pkt->size, 1, f);
+
       if(allowed_to_send > pkt->size){
         crf -= 0.04;
       } else {
