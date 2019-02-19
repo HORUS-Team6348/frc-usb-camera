@@ -380,7 +380,6 @@ uvc_error_t uvc_setup_dev(){
 
   res = uvc_open(udl[0], &devh_a);
   res = uvc_open(udl[1], &devh_b);
-  res = uvc_open(udl[2], &devh_c);
 
   uvc_free_device_list(udl, 0);
 
@@ -395,7 +394,6 @@ uvc_error_t uvc_setup_dev(){
 uvc_error_t uvc_setup_stream(int width, int height, int fps){
   res = uvc_get_stream_ctrl_format_size(devh_a, &ctrl_a, UVC_FRAME_FORMAT_MJPEG, width, height, fps);
   res = uvc_get_stream_ctrl_format_size(devh_b, &ctrl_b, UVC_FRAME_FORMAT_MJPEG, width, height, fps);
-  res = uvc_get_stream_ctrl_format_size(devh_c, &ctrl_c, UVC_FRAME_FORMAT_MJPEG, width, height, fps);
 
   if (res < 0) {
     uvc_perror(res, "uvc_get_stream_ctrl_format_size");
@@ -406,7 +404,6 @@ uvc_error_t uvc_setup_stream(int width, int height, int fps){
 uvc_error_t start_stream(){
   res = uvc_start_streaming(devh_a, &ctrl_a, cba, 0, 0);
   res = uvc_start_streaming(devh_b, &ctrl_b, cbb, 0, 0);
-  res = uvc_start_streaming(devh_c, &ctrl_c, cbc, 0, 0);
 
   prev_frame_time = get_ns();
 
@@ -419,14 +416,12 @@ uvc_error_t start_stream(){
 
   res = uvc_set_ae_priority(devh_a, 1);
   res = uvc_set_ae_priority(devh_b, 1);
-  res = uvc_set_ae_priority(devh_c, 1);
 
 }
 
 void stop_stream(){
     uvc_stop_streaming(devh_a);
     uvc_stop_streaming(devh_b);
-    uvc_stop_streaming(devh_c);
     ffmpeg_encode_frame(frame_counter+1, true);
     printf("\n");
 }
