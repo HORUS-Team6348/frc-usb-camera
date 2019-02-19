@@ -1,6 +1,6 @@
 from twisted.internet.protocol import DatagramProtocol
 from twisted.internet import reactor
-from packet import Packet, State, NegotiatePacket, PacketType, AckPacket, FinishPacket
+from packet import Packet, State, NegotiatePacket, PacketType, AckPacket, FinishPacket, ChangePacket
 import time
 import sdl2.ext
 import numpy as np
@@ -52,7 +52,14 @@ class VideoClient(DatagramProtocol):
                 raw_frame.shape = (1280, 720, 4)
                 np.copyto(window_array, raw_frame)
                 window.refresh()
-                sdl2.SDL_PumpEvents()
+                for event in sdl2.ext.get_events():
+                    if event.type == sdl2.SDL_KEYDOWN:
+                        if sdl2.SDL_GetKeyName(event.key.keysym.sym).lower() == b'a':
+                            res = ChangePacket(0)
+                            self.sendPacket(res)
+                        elif sdl2.SDL_GetKeyName(event.key.keysym.sym).lower() == b'd':
+                            res = ChangePacket(1)
+                            self.sendPacket(res)
                 frames.pop(packet.frame_idx)
                 res = AckPacket(packet.frame_idx, interarrival_time)
                 self.sendPacket(res)

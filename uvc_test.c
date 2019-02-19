@@ -557,6 +557,7 @@ void control_loop(){
       change_packet cpacket;
       decode_change_packet(nbuf, &cpacket);
       camera_id = cpacket.camera_id;
+      printf("changed camera to %i", camera_id);
     } else if(type == FINISH) {
       stop_stream();
       finish_connection();

@@ -14,6 +14,7 @@ class PacketType:
     FRAME       = 3
     ACK         = 4
     FINISH      = 5
+    CHANGE      = 6
 
 class Packet:
     @staticmethod
@@ -29,6 +30,8 @@ class Packet:
             return AckPacket.fromWirePacket(packet)
         elif packet_id == PacketType.FINISH:
             return FinishPacket.fromWirePacket(packet)
+        elif packet_id == PacketType.CHANGE:
+            return ChangePacket.fromWirePacket(packet)
 
 class NegotiatePacket(Packet):
     def __init__(self, width, height, fps):
@@ -125,3 +128,19 @@ class FinishPacket(Packet):
 
     def __repr__(self):
         return f"FinishPacket()"
+
+class ChangePacket(Packet):
+    def __init__(self, camera_id):
+        self.type = PacketType.CHANGE
+        self.camera_id = camera_id
+
+    @staticmethod
+    def fromWirePacket(packet):
+        type, camera_id = struct.unpack("!BB", packet)
+        return ChangePacket(type, camera_id)
+
+    def encode(self):
+        return struct.pack("!BB", self.type, self.camera_id)
+
+    def __repr__(self):
+        return f"ChangePacket(camera_id={self})"
