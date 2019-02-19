@@ -382,7 +382,7 @@ uvc_error_t uvc_setup_dev(){
   res = uvc_open(udl[1], &devh_b);
   res = uvc_open(udl[2], &devh_c);
 
-  res = uvc_free_device_list(udl, 0);
+  uvc_free_device_list(udl, 0);
 
   if (res < 0) {
     uvc_perror(res, "uvc_open");
