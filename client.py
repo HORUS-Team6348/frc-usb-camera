@@ -51,6 +51,7 @@ class VideoClient(DatagramProtocol):
                 raw_frame = np.rot90(raw_frame)
                 raw_frame = np.flipud(raw_frame)
                 raw_frame.shape = (1280, 720, 4)
+                raw_frame[637:643, :] = [0x00, 0x00, 0xFF, 0x00]
                 np.copyto(window_array, raw_frame)
                 window.refresh()
                 f.write(whole_frame)
