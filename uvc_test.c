@@ -300,7 +300,7 @@ void cbb(uvc_frame_t *frame, void *ptr){
 }
 
 void cba(uvc_frame_t *frame, void *ptr){
-  if(camera_id == 0 && lock != 0){
+  if(camera_id == 0 && lock != 1){
     lock = 1;
     uint64_t start, end, elapsed;
     uint32_t ret, pkt_counter;
