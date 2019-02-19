@@ -367,20 +367,20 @@ uvc_error_t uvc_setup_dev(){
 
   printf("libuvc initialized correctly\n");
 
-  res = uvc_find_device(ctx, &dev_a, 0x045e, 0x0779, NULL); //Microsoft Corp. LifeCam HD-3000
-  res = uvc_find_device(ctx, &dev_b, 0x046d, 0x0826, "EA8C4F90"); //Logitech, Inc. HD Webcam C525
-  res = uvc_find_device(ctx, &dev_c, 0x046d, 0x0826, "8ABCAA10"); //Logitech, Inc. HD Webcam C525
+  uvc_device_t **udl;
+
+  res = uvc_get_device_list(ctx, &udl);
 
   if (res < 0) {
-    uvc_perror(res, "uvc_find_device");
+    uvc_perror(res, "uvc_get_device_list");
     return res;
   }
 
   printf("found devices\n");
 
-  res = uvc_open(dev_a, &devh_a);
-  res = uvc_open(dev_b, &devh_b);
-  res = uvc_open(dev_c, &devh_c);
+  res = uvc_open(udl[0], &devh_a);
+  res = uvc_open(udl[1], &devh_b);
+  res = uvc_open(udl[2], &devh_c);
 
   if (res < 0) {
     uvc_perror(res, "uvc_open");
@@ -424,6 +424,7 @@ uvc_error_t start_stream(){
 void stop_stream(){
     uvc_stop_streaming(devh_a);
     uvc_stop_streaming(devh_b);
+    uvc_stop_streaming(devh_c);
     ffmpeg_encode_frame(frame_counter+1, true);
     printf("\n");
 }
