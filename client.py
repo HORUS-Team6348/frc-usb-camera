@@ -56,9 +56,11 @@ class VideoClient(DatagramProtocol):
                     if event.type == sdl2.SDL_KEYDOWN:
                         if sdl2.SDL_GetKeyName(event.key.keysym.sym).lower() == b'a':
                             res = ChangePacket(0)
+                            print("Changed camera to 0")
                             self.sendPacket(res)
                         elif sdl2.SDL_GetKeyName(event.key.keysym.sym).lower() == b'd':
                             res = ChangePacket(1)
+                            print("Changed camera to 1")
                             self.sendPacket(res)
                 frames.pop(packet.frame_idx)
                 res = AckPacket(packet.frame_idx, interarrival_time)

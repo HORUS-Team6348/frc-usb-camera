@@ -158,7 +158,7 @@ void network_send_frame(uint32_t frame_idx, uint8_t *data, int len){
       die("error while sending");
     }
 
-    printf("wrote frame %i seq %i/%i (%i/%i written)\n\n", frame_idx, seq_idx, seq_total, already_sent+(packet_len-17), len);
+    //printf("wrote frame %i seq %i/%i (%i/%i written)\n\n", frame_idx, seq_idx, seq_total, already_sent+(packet_len-17), len);
 
     already_sent += MTU;
     seq_idx += 1;
@@ -225,7 +225,6 @@ void ffmpeg_encode_frame(uint64_t pts, bool flush){
 }
 
 void cb(uvc_frame_t *frame, void *ptr){
-
   uint64_t start, end, elapsed;
   uint32_t ret, pkt_counter;
 
