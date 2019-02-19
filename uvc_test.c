@@ -229,6 +229,7 @@ void ffmpeg_encode_frame(uint64_t pts, bool flush){
 }
 
 void cb(uvc_frame_t *frame, void *ptr){
+  lock = 1;
   uint64_t start, end, elapsed;
   uint32_t ret, pkt_counter;
 
@@ -261,29 +262,24 @@ void cb(uvc_frame_t *frame, void *ptr){
   frame_processing_times += elapsed;
   double pct = (elapsed * fps / 1e7);
   printf("\033[2Kframe processed in %" PRIu64 " ns (%f%% of available time) (encoded with crf: %i)\n", elapsed, pct, (int) crf);
+  lock = 0;
 }
 
 void cba(uvc_frame_t *frame, void *ptr){
   if(camera_id == 0 && lock != 1){
-    lock = 1;
     cb(frame, ptr);
-    lock = 0;
   }
 }
 
 void cbb(uvc_frame_t *frame, void *ptr){
   if(camera_id == 1 && lock != 1){
-    lock = 1;
     cb(frame, ptr);
-    lock = 0;
   }
 }
 
 void cbc(uvc_frame_t *frame, void *ptr){
   if(camera_id == 2 && lock != 1){
-    lock = 1;
     cb(frame, ptr);
-    lock = 0;
   }
 }
 
