@@ -4,7 +4,7 @@ Ultra fast camera streaming server for Raspberry Pi - uses H.264 video encoder a
 # Server-side setup
 
 1. Clone the repository
-2. Compile it by running `make test`. Make sure to have the required libraries installed: TurboJPEG, libuvc and libavcodec.
+2. Compile it by running `make test`. Make sure to have the required libraries installed: TurboJPEG, libusb, libuvc and libavcodec.
 3. Run `uvc_test`. It should start listening on UDP port 1188 by default. Also, the default setup assumes two cameras, make sure they are connected.
 4. Once this is working, you may wanna set it up as a systemd service so that it starts up automatically on boot.
 5. For FRC applications, current rules require all wireless radios to be disabled. Also, it is highly recommended to set the partitions as read only to prevent data corruption due to sudden loss of power.
@@ -14,7 +14,8 @@ Ultra fast camera streaming server for Raspberry Pi - uses H.264 video encoder a
 1. Clone the repository
 2. Install all required Python libraries. These should be Twisted, SDL2 and PyAV. Pro tip: Last time I tried installing PyAV on Windows it wouldn't let me, so I had to install it using Conda.
 3. Modify the IP address on line 30 of client.py to point to the server.
-4. You should be all set. Run `python client.py`. You may wanna set it up as a shortcut on the desktop for faster access during FRC comps. Also, create a folder named videos, the program will dump all received frames there for future reference. They're raw H264 frames, which you should be able to watch using VLC. 
+4. Create a folder named videos, the program will dump all received frames there for future reference. They're raw H264 frames, which you should be able to watch using VLC. 
+4. You should be all set. Run `python client.py`. You may wanna set it up as a shortcut on the desktop for faster access during FRC comps.
 
 
 # Known issues
